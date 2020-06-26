@@ -1,0 +1,25 @@
+buildPack: none
+pipelineConfig:
+  pipelines:
+    pullRequest:
+      pipeline:
+        stages:
+          - agent:
+              image: gcr.io/jenkinsxio/builder-go
+            name: chart
+            steps:
+              - name: lint
+                command: helm lint
+                dir: /workspace/source/pusher-wave
+                image: gcr.io/jenkinsxio-labs/helm:0.0.21
+    release:
+      pipeline:
+        stages:
+          - agent:
+              image: gcr.io/jenkinsxio/builder-go
+            name: chart
+            steps:
+              - name: release
+                command: make release
+                dir: /workspace/source/pusher-wave
+                image: gcr.io/jenkinsxio-labs/helm:0.0.21
