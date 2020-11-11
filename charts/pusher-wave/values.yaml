@@ -11,7 +11,7 @@ global:
 annotations: {}
 image:
   name: quay.io/pusher/wave
-  tag: v0.4.0
+  tag: 0.4.7
   pullPolicy: IfNotPresent
 
 # Node selector for the wave pods
