@@ -1,20 +1,7 @@
 CHART_REPO := gs://jenkinsxio/charts
 NAME := pusher-wave
-VERSION := 1.0.0
-
 build: clean
-	rm -rf Chart.lock
-	helm dependency build
 	helm lint
-
-install: clean build
-	helm install . --name ${NAME}
-
-upgrade: clean build
-	helm upgrade ${NAME} .
-
-delete:
-	helm delete --purge ${NAME}
 
 clean:
 	rm -rf charts
@@ -22,10 +9,7 @@ clean:
 
 release: clean
 	sed -i -e "s/version:.*/version: $(VERSION)/" Chart.yaml
-
-	helm dependency build
 	helm lint
 	helm package .
-	helm repo add jx $(CHART_REPO)
-	helm gcs push ${NAME}*.tgz jx --public
-	rm -rf ${NAME}*.tgz%
+	helm repo add jx-labs $(CHART_REPO)
+	helm gcs push ${NAME}*.tgz jx-labs --public

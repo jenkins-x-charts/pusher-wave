@@ -43,7 +43,8 @@ spec:
           resources: {}
           script: |
             #!/usr/bin/env bash
-            jx gitops helm release
+            cd charts/pusher-wave
+            make release
 
   podTemplate: {}
   serviceAccountName: tekton-bot
