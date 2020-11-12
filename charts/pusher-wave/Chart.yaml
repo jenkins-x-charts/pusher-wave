@@ -1,11 +1,11 @@
 apiVersion: v1
-name: pusher-wave
+appVersion: 0.4.11
 description: wave chart that runs on kubernetes
-version: 1.0.0
-appVersion: v0.4.0
-keywords:
-  - wave
-  - kubernetes
 home: https://github.com/pusher/wave
+keywords:
+- wave
+- kubernetes
+name: pusher-wave
 sources:
 - https://github.com/pusher/wave
+version: 0.4.11
