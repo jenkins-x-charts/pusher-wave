@@ -6,25 +6,21 @@ global:
   # - name: "image-pull-secret"
   rbac:
     enabled: true
-
 # Annotations for the wave pods
 annotations: {}
 image:
   name: quay.io/pusher/wave
-  tag: v0.4.0
+  tag: 0.4.17
   pullPolicy: IfNotPresent
-
+  repository: ghcr.io/jenkins-x/pusher-wave
 # Node selector for the wave pods
 nodeSelector: {}
-
 # Replicas > 1 will enable leader election
 replicas: 1
-
 # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
 securityContext:
   runAsNonRoot: true
   runAsUser: 1000
-
 # Service account config for the agent pods
 serviceAccount:
   # Specifies whether a ServiceAccount should be created
