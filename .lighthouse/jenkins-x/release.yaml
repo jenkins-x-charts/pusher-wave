@@ -28,15 +28,8 @@ spec:
           resources: {}
         - name: promote-changelog
           resources: {}
-        - image: gcr.io/jenkinsxio/jx-cli:3.0.773
-          name: release-chart
+        - name: promote-helm-release
           resources: {}
-          script: |
-            #!/usr/bin/env bash
-            source .jx/variables.sh
-            cd /workspace/source/charts/pusher-wave
-            make release
-
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 240h0m0s
