@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Pusher Ltd.
+Copyright 2018 Pusher Ltd. and Wave Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@ import (
 	"github.com/onsi/gomega"
 	gtypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -34,32 +34,25 @@ type Matcher struct {
 	Client client.Client
 }
 
-// Object is the combination of two interfaces as a helper for passing
-// Kubernetes objects between methods
-type Object interface {
-	runtime.Object
-	metav1.Object
-}
-
 // UpdateFunc modifies the object fetched from the API server before sending
 // the update
-type UpdateFunc func(Object) Object
+type UpdateFunc func(client.Object) client.Object
 
 // Create creates the object on the API server
-func (m *Matcher) Create(obj Object, extras ...interface{}) gomega.GomegaAssertion {
+func (m *Matcher) Create(obj client.Object, extras ...interface{}) gomega.GomegaAssertion {
 	err := m.Client.Create(context.TODO(), obj)
 	return gomega.Expect(err, extras)
 }
 
 // Delete deletes the object from the API server
-func (m *Matcher) Delete(obj Object, extras ...interface{}) gomega.GomegaAssertion {
+func (m *Matcher) Delete(obj client.Object, extras ...interface{}) gomega.GomegaAssertion {
 	err := m.Client.Delete(context.TODO(), obj)
 	return gomega.Expect(err, extras)
 }
 
-// Update udpates the object on the API server by fetching the object
+// Update updates the object on the API server by fetching the object
 // and applying a mutating UpdateFunc before sending the update
-func (m *Matcher) Update(obj Object, fn UpdateFunc, intervals ...interface{}) gomega.GomegaAsyncAssertion {
+func (m *Matcher) Update(obj client.Object, fn UpdateFunc, intervals ...interface{}) gomega.GomegaAsyncAssertion {
 	key := types.NamespacedName{
 		Name:      obj.GetName(),
 		Namespace: obj.GetNamespace(),
@@ -75,7 +68,7 @@ func (m *Matcher) Update(obj Object, fn UpdateFunc, intervals ...interface{}) go
 }
 
 // Get gets the object from the API server
-func (m *Matcher) Get(obj Object, intervals ...interface{}) gomega.GomegaAsyncAssertion {
+func (m *Matcher) Get(obj client.Object, intervals ...interface{}) gomega.GomegaAsyncAssertion {
 	key := types.NamespacedName{
 		Name:      obj.GetName(),
 		Namespace: obj.GetNamespace(),
@@ -87,17 +80,17 @@ func (m *Matcher) Get(obj Object, intervals ...interface{}) gomega.GomegaAsyncAs
 }
 
 // Consistently continually gets the object from the API for comparison
-func (m *Matcher) Consistently(obj Object, intervals ...interface{}) gomega.GomegaAsyncAssertion {
+func (m *Matcher) Consistently(obj client.Object, intervals ...interface{}) gomega.GomegaAsyncAssertion {
 	return m.consistentlyObject(obj, intervals...)
 }
 
 // consistentlyObject gets an individual object from the API server
-func (m *Matcher) consistentlyObject(obj Object, intervals ...interface{}) gomega.GomegaAsyncAssertion {
+func (m *Matcher) consistentlyObject(obj client.Object, intervals ...interface{}) gomega.GomegaAsyncAssertion {
 	key := types.NamespacedName{
 		Name:      obj.GetName(),
 		Namespace: obj.GetNamespace(),
 	}
-	get := func() Object {
+	get := func() client.Object {
 		err := m.Client.Get(context.TODO(), key, obj)
 		if err != nil {
 			panic(err)
@@ -107,89 +100,56 @@ func (m *Matcher) consistentlyObject(obj Object, intervals ...interface{}) gomeg
 	return gomega.Consistently(get, intervals...)
 }
 
-// Eventually continually gets the object from the API for comparison
-func (m *Matcher) Eventually(obj runtime.Object, intervals ...interface{}) gomega.GomegaAsyncAssertion {
-	// If the object is a list, return a list
-	if meta.IsListType(obj) {
-		return m.eventuallyList(obj, intervals...)
-	}
-	if o, ok := obj.(Object); ok {
-		return m.eventuallyObject(o, intervals...)
-	}
-	//Should not get here
-	panic("Unknown object.")
-}
-
-// eventuallyObject gets an individual object from the API server
-func (m *Matcher) eventuallyObject(obj Object, intervals ...interface{}) gomega.GomegaAsyncAssertion {
-	key := types.NamespacedName{
-		Name:      obj.GetName(),
-		Namespace: obj.GetNamespace(),
-	}
-	get := func() Object {
-		err := m.Client.Get(context.TODO(), key, obj)
-		if err != nil {
-			panic(err)
-		}
-		return obj
-	}
-	return gomega.Eventually(get, intervals...)
-}
-
-// eventuallyList gets a list type  from the API server
-func (m *Matcher) eventuallyList(obj runtime.Object, intervals ...interface{}) gomega.GomegaAsyncAssertion {
-	list := func() runtime.Object {
-		err := m.Client.List(context.TODO(), obj)
-		if err != nil {
-			panic(err)
-		}
-		return obj
-	}
-	return gomega.Eventually(list, intervals...)
-}
-
 // WithAnnotations returns the object's Annotations
 func WithAnnotations(matcher gtypes.GomegaMatcher) gtypes.GomegaMatcher {
-	return gomega.WithTransform(func(obj Object) map[string]string {
+	return gomega.WithTransform(func(obj client.Object) map[string]string {
 		return obj.GetAnnotations()
 	}, matcher)
 }
 
 // WithFinalizers returns the object's Finalizers
 func WithFinalizers(matcher gtypes.GomegaMatcher) gtypes.GomegaMatcher {
-	return gomega.WithTransform(func(obj Object) []string {
+	return gomega.WithTransform(func(obj client.Object) []string {
 		return obj.GetFinalizers()
 	}, matcher)
 }
 
 // WithItems returns the lists Finalizers
 func WithItems(matcher gtypes.GomegaMatcher) gtypes.GomegaMatcher {
-	return gomega.WithTransform(func(obj runtime.Object) []runtime.Object {
+	return gomega.WithTransform(func(obj client.ObjectList) []client.Object {
 		items, err := meta.ExtractList(obj)
 		if err != nil {
 			panic(err)
 		}
-		return items
+		var objs []client.Object
+		for _, item := range items {
+			co, ok := item.(client.Object)
+			if !ok {
+				panic("Item is not a client.Object")
+			}
+			objs = append(objs, co)
+		}
+		return objs
 	}, matcher)
 }
 
 // WithOwnerReferences returns the object's OwnerReferences
 func WithOwnerReferences(matcher gtypes.GomegaMatcher) gtypes.GomegaMatcher {
-	return gomega.WithTransform(func(obj Object) []metav1.OwnerReference {
+	return gomega.WithTransform(func(obj client.Object) []metav1.OwnerReference {
 		return obj.GetOwnerReferences()
 	}, matcher)
 }
 
 // WithPodTemplateAnnotations returns the PodTemplate's annotations
 func WithPodTemplateAnnotations(matcher gtypes.GomegaMatcher) gtypes.GomegaMatcher {
-	return gomega.WithTransform(func(obj Object) map[string]string {
-		switch obj.(type) {
+	return gomega.WithTransform(func(obj client.Object) map[string]string {
+		switch obj := obj.(type) {
 		case *appsv1.Deployment:
-			return obj.(*appsv1.Deployment).Spec.Template.GetAnnotations()
+			return obj.Spec.Template.GetAnnotations()
 		case *appsv1.StatefulSet:
-			return obj.(*appsv1.StatefulSet).Spec.Template.GetAnnotations()
+			return obj.Spec.Template.GetAnnotations()
 		case *appsv1.DaemonSet:
-			return obj.(*appsv1.DaemonSet).Spec.Template.GetAnnotations()
+			return obj.Spec.Template.GetAnnotations()
 		default:
 			panic("Unknown pod template type.")
 		}
@@ -198,7 +158,7 @@ func WithPodTemplateAnnotations(matcher gtypes.GomegaMatcher) gtypes.GomegaMatch
 
 // WithDeletionTimestamp returns the objects Deletion Timestamp
 func WithDeletionTimestamp(matcher gtypes.GomegaMatcher) gtypes.GomegaMatcher {
-	return gomega.WithTransform(func(obj Object) *metav1.Time {
+	return gomega.WithTransform(func(obj client.Object) *metav1.Time {
 		return obj.GetDeletionTimestamp()
 	}, matcher)
 }

@@ -1,3 +1,5 @@
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://raw.githubusercontent.com/wave-k8s/wave/master/LICENSE) [![Go Report Card](https://goreportcard.com/badge/github.com/wave-k8s/wave)](https://goreportcard.com/report/github.com/wave-k8s/wave) [![Build Status](https://github.com/wave-k8s/wave/actions/workflows/image.yaml/badge.svg)](https://github.com/wave-k8s/wave/actions/workflows/image.yaml) [![Go Reference](https://pkg.go.dev/badge/github.com/wave-k8s/wave.svg)](https://pkg.go.dev/github.com/wave-k8s/wave)
+
 <img src="./wave-logo.svg" width=150 height=150 alt="Wave Logo"/>
 
 # Wave
@@ -7,23 +9,6 @@ Deployment's Pods always have up to date configuration.
 
 By monitoring ConfigMaps and Secrets mounted by a Deployment, Wave can trigger
 a Rolling Update of the Deployment when the mounted configuration is changed.
-
-## Table of Contents
-
-- [Introduction](#introduction)
-- [Installation](#installation)
-  - [Deploying to Kubernetes](#deploying-to-kubernetes)
-  - [Configuration](#configuration)
-    - [Leader Election](#leader-election)
-    - [Sync period](#sync-period)
-- [Quick Start](#quick-start)
-- [Project Concepts](#project-concepts)
-  - [Enabling Wave for a Deployment](#enabling-wave-for-a-deployment)
-  - [Triggering Updates](#triggering-updates)
-  - [Finalizers](#finalizers)
-- [Communication](#communication)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Introduction
 
@@ -58,17 +43,33 @@ rather than when the Pods happen to be re-cycled.
 
 ## Installation
 
+Wave is released periodically. The latest version is `v0.5.0`
+
+A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
+
 ### Deploying to Kubernetes
+
+Public docker images for releases since v0.4.0 are available on [Quay](https://quay.io/repository/wave-k8s/wave).
+
+#### Deploying with Helm
+
+Helm charts are available in this repository and hosted through Github Pages.
+To deploy, add the repository to helm and install:
+
+```
+$ helm repo add wave-k8s https://wave-k8s.github.io/wave/
+$ helm install wave wave-k8s/wave
+```
+
+#### Deploying with Kustomize
 
 Wave is a [Kubebuilder](https://github.com/kubernetes-sigs/kubebuilder) based
 project, as such we have auto-generated [Kustomize](https://github.com/kubernetes-sigs/kustomize)
 configuration as an example of how to install the controller in the
 [config](config) folder.
 
-A public docker image is available on [Quay](https://quay.io/repository/pusher/wave).
-
 ```
-quay.io/pusher/wave
+quay.io/wave-k8s/wave
 ```
 
 #### RBAC

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Pusher Ltd.
+Copyright 2018 Pusher Ltd. and Wave Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,15 +17,17 @@ limitations under the License.
 package core
 
 import (
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pusher/wave/test/utils"
+	"github.com/wave-k8s/wave/test/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -54,11 +56,18 @@ var _ = Describe("Wave children Suite", func() {
 
 	BeforeEach(func() {
 		mgr, err := manager.New(cfg, manager.Options{
-			MetricsBindAddress: "0",
+			Metrics: metricsserver.Options{
+				BindAddress: "0",
+			},
 		})
 		Expect(err).NotTo(HaveOccurred())
+		var cerr error
+		c, cerr = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+		Expect(cerr).NotTo(HaveOccurred())
 		c = mgr.GetClient()
-		h = NewHandler(c, mgr.GetEventRecorderFor("wave"))
+		//		h = NewHandler(c, mgr.GetEventRecorderFor("wave"))
+		h = NewHandler(mgr.GetClient(), mgr.GetEventRecorderFor("wave"))
+
 		m = utils.Matcher{Client: c}
 
 		// Create some configmaps and secrets
@@ -302,11 +311,11 @@ var _ = Describe("Wave children Suite", func() {
 			ownerRef := utils.GetOwnerRefDeployment(deploymentObject)
 
 			for _, obj := range []Object{cm1, s1} {
-				m.Update(obj, func(obj utils.Object) utils.Object {
+				m.Update(obj, func(obj client.Object) client.Object {
 					obj.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
 					return obj
 				}, timeout).Should(Succeed())
-				m.Eventually(obj, timeout).Should(utils.WithOwnerReferences(ContainElement(ownerRef)))
+				Eventually(obj, timeout).Should(utils.WithOwnerReferences(ContainElement(ownerRef)))
 			}
 
 			var err error

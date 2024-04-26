@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Pusher Ltd.
+Copyright 2018 Pusher Ltd. and Wave Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,14 +17,16 @@ limitations under the License.
 package core
 
 import (
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pusher/wave/test/utils"
+	"github.com/wave-k8s/wave/test/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -50,10 +52,14 @@ var _ = Describe("Wave hash Suite", func() {
 
 		BeforeEach(func() {
 			mgr, err := manager.New(cfg, manager.Options{
-				MetricsBindAddress: "0",
+				Metrics: metricsserver.Options{
+					BindAddress: "0",
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			c = mgr.GetClient()
+			var cerr error
+			c, cerr = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+			Expect(cerr).NotTo(HaveOccurred())
 			m = utils.Matcher{Client: c}
 
 			stopMgr, mgrStopped = StartTestManager(mgr)
@@ -102,7 +108,7 @@ var _ = Describe("Wave hash Suite", func() {
 			h1, err := calculateConfigHash(c)
 			Expect(err).NotTo(HaveOccurred())
 
-			m.Update(cm1, func(obj utils.Object) utils.Object {
+			m.Update(cm1, func(obj client.Object) client.Object {
 				cm := obj.(*corev1.ConfigMap)
 				cm.Data["key1"] = modified
 
@@ -125,7 +131,7 @@ var _ = Describe("Wave hash Suite", func() {
 			h1, err := calculateConfigHash(c)
 			Expect(err).NotTo(HaveOccurred())
 
-			m.Update(cm1, func(obj utils.Object) utils.Object {
+			m.Update(cm1, func(obj client.Object) client.Object {
 				cm := obj.(*corev1.ConfigMap)
 				cm.Data["key1"] = modified
 
@@ -154,14 +160,14 @@ var _ = Describe("Wave hash Suite", func() {
 			h1, err := calculateConfigHash(c)
 			Expect(err).NotTo(HaveOccurred())
 
-			m.Update(cm1, func(obj utils.Object) utils.Object {
+			m.Update(cm1, func(obj client.Object) client.Object {
 				cm := obj.(*corev1.ConfigMap)
 				cm.Data["key1"] = modified
 
 				return cm
 			}, timeout).Should(Succeed())
 
-			m.Update(s1, func(obj utils.Object) utils.Object {
+			m.Update(s1, func(obj client.Object) client.Object {
 				s := obj.(*corev1.Secret)
 				s.Data["key1"] = []byte("modified")
 
@@ -190,14 +196,14 @@ var _ = Describe("Wave hash Suite", func() {
 			h1, err := calculateConfigHash(c)
 			Expect(err).NotTo(HaveOccurred())
 
-			m.Update(cm1, func(obj utils.Object) utils.Object {
+			m.Update(cm1, func(obj client.Object) client.Object {
 				cm := obj.(*corev1.ConfigMap)
 				cm.Data["key3"] = modified
 
 				return cm
 			}, timeout).Should(Succeed())
 
-			m.Update(s1, func(obj utils.Object) utils.Object {
+			m.Update(s1, func(obj client.Object) client.Object {
 				s1 := obj.(*corev1.Secret)
 				s1.Data["key3"] = []byte("modified")
 
@@ -220,7 +226,7 @@ var _ = Describe("Wave hash Suite", func() {
 			h1, err := calculateConfigHash(c)
 			Expect(err).NotTo(HaveOccurred())
 
-			m.Update(s1, func(obj utils.Object) utils.Object {
+			m.Update(s1, func(obj client.Object) client.Object {
 				s := obj.(*corev1.Secret)
 				s.Annotations = map[string]string{"new": "annotations"}
 

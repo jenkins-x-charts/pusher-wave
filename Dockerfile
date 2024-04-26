@@ -1,28 +1,26 @@
 # Build the manager binary
-FROM golang:1.12 as builder
+FROM golang:1.22 as builder
 
 ARG VERSION=undefined
 
-# Install Dep
-RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+# Set the working directory
+WORKDIR /go/src/github.com/wave-k8s/wave
 
-# Copy in the go src
-WORKDIR /go/src/github.com/pusher/wave
-COPY Gopkg.lock Gopkg.lock
-COPY Gopkg.toml Gopkg.toml
+# Copy the go mod and sum files
+COPY go.mod go.sum ./
 
-# Fetch dependencies before copying code (should cache unless Gopkg's change)
-RUN dep ensure --vendor-only
+# Fetch dependencies, leveraging Docker cache layers
+RUN go mod download
 
-COPY pkg/    pkg/
-COPY cmd/    cmd/
+# Copy the rest of the source code
+COPY . .
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o wave -ldflags="-X main.VERSION=${VERSION}" github.com/pusher/wave/cmd/manager
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o wave -ldflags="-X main.VERSION=${VERSION}" ./cmd/manager
 
 # Copy the controller-manager into a thin image
-FROM alpine:3.9
+FROM alpine:3.11
 RUN apk --no-cache add ca-certificates
 WORKDIR /bin
-COPY --from=builder /go/src/github.com/pusher/wave/wave .
+COPY --from=builder /go/src/github.com/wave-k8s/wave/wave .
 ENTRYPOINT ["/bin/wave"]

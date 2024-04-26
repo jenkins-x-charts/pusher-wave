@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Pusher Ltd.
+Copyright 2018 Pusher Ltd. and Wave Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,14 +22,17 @@ import (
 	"sync"
 	"time"
 
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pusher/wave/test/utils"
+	"github.com/wave-k8s/wave/test/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -49,10 +52,14 @@ var _ = Describe("Wave owner references Suite", func() {
 
 	BeforeEach(func() {
 		mgr, err := manager.New(cfg, manager.Options{
-			MetricsBindAddress: "0",
+			Metrics: metricsserver.Options{
+				BindAddress: "0",
+			},
 		})
 		Expect(err).NotTo(HaveOccurred())
-		c = mgr.GetClient()
+		var cerr error
+		c, cerr = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+		Expect(cerr).NotTo(HaveOccurred())
 		h = NewHandler(c, mgr.GetEventRecorderFor("wave"))
 		m = utils.Matcher{Client: c}
 
@@ -97,7 +104,7 @@ var _ = Describe("Wave owner references Suite", func() {
 			s2 = utils.ExampleSecret2.DeepCopy()
 
 			for _, obj := range []Object{cm1, cm2, s1, s2} {
-				m.Update(obj, func(obj utils.Object) utils.Object {
+				m.Update(obj, func(obj client.Object) client.Object {
 					obj.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
 					return obj
 				}, timeout).Should(Succeed())
@@ -106,7 +113,7 @@ var _ = Describe("Wave owner references Suite", func() {
 			f := deploymentObject.GetFinalizers()
 			f = append(f, FinalizerString)
 			f = append(f, "keep.me.around/finalizer")
-			m.Update(deploymentObject, func(obj utils.Object) utils.Object {
+			m.Update(deploymentObject, func(obj client.Object) client.Object {
 				obj.SetFinalizers(f)
 				return obj
 			}, timeout).Should(Succeed())
@@ -148,12 +155,14 @@ var _ = Describe("Wave owner references Suite", func() {
 
 		It("removes owner references from all children", func() {
 			for _, obj := range []Object{cm1, cm2, s1, s2} {
-				m.Eventually(obj, timeout).ShouldNot(utils.WithOwnerReferences(ContainElement(ownerRef)))
+				m.Get(obj, timeout).Should(Succeed())
+				Eventually(obj, timeout).ShouldNot(utils.WithOwnerReferences(ContainElement(ownerRef)))
 			}
 		})
 
 		It("removes the finalizer from the deployment", func() {
-			m.Eventually(deploymentObject, timeout).ShouldNot(utils.WithFinalizers(ContainElement(FinalizerString)))
+			m.Get(deploymentObject, timeout).Should(Succeed())
+			Eventually(deploymentObject, timeout).ShouldNot(utils.WithFinalizers(ContainElement(FinalizerString)))
 		})
 	})
 

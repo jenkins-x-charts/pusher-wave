@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Pusher Ltd.
+Copyright 2018 Pusher Ltd. and Wave Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -41,10 +41,10 @@ func (h *Handler) handleDelete(obj podController) (reconcile.Result, error) {
 	}
 
 	// Remove the object's Finalizer and update if necessary
-	copy := obj.DeepCopy()
+	copy := obj.DeepCopyPodController()
 	removeFinalizer(copy)
 	if !reflect.DeepEqual(obj, copy) {
-		err := h.Update(context.TODO(), copy.GetObject())
+		err := h.Update(context.TODO(), copy.GetApiObject())
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("error updating Deployment: %v", err)
 		}
